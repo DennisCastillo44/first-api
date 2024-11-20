@@ -37,6 +37,13 @@ pub mod database_mod {
                 );
             ", [])?;
 
+            conn.execute("CREATE TABLE IF NOT EXISTS users(
+                idUser INTEGER PRIMARY KEY,
+                username VARCHAR(255),
+                password TEXT,
+                idPerson INTEGER
+            )",[])?;
+
             conn.commit()?;
             binding.close().unwrap();
 

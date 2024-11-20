@@ -8,7 +8,8 @@ pub struct Person {
     pub last_name: String,
     pub birthday: String,
     pub active: bool,
-    pub contact: Option<Contact>
+    pub contact: Option<Contact>,
+    pub user_data: Option<User>
     //pub assignatures: Vec<assignatures::Assignatures>
 }
 
@@ -18,3 +19,8 @@ pub struct Contact {
     pub phone: String
 }
 
+#[derive(Serialize, Deserialize, Debug)]
+pub struct User {
+    pub username: String,
+    pub password: String
+}

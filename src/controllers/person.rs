@@ -1,7 +1,7 @@
 use actix_web::{http::header::ContentType, web::{self}, HttpRequest, HttpResponse, Responder, Result};
 use serde::{Deserialize, Serialize};
-use crate::{models::person, types::inicio::ResponseApi};
-use crate::types::person::Person;
+use crate::{lib_::hashing256::Hash, models::{person, user::{self}}};
+use crate::types::person::{Person, User as typeUser};
 
 pub async fn persons() -> Result<impl Responder> {
 
@@ -11,10 +11,39 @@ pub async fn persons() -> Result<impl Responder> {
 
 pub async fn register_person(data: web::Json<Person>) -> Result<impl Responder> {
 
-    let last_create = person::PersonModel::create_person(&data).unwrap();
-    let response_ = ResponseApi {person_id: last_create};
-    //Ok(web::Json(ResponseApi {person_id: last_create}))
-    Ok(HttpResponse::Created().content_type(ContentType::json()).json(response_))
+    #[derive(Serialize, Deserialize, Debug)]
+    struct ResponseCreatePerson {
+        id_person: u64,
+        id_user: u64
+    }
+
+    let mut responseCreate = ResponseCreatePerson {
+        id_person: 0,
+        id_user: 0
+    };
+
+    let user_data = match &data.user_data {
+        Some(t) => t,
+        None => &typeUser {
+            username: String::from(""),
+            password: String::from("")
+        }
+    };
+    
+    match person::PersonModel::create_person(&data) {
+        Ok(person) => {
+            
+            responseCreate.id_person = person as u64;
+            let mut new_user = user::User::new(&user_data.username, &user_data.password, Some(person as u64));
+            match new_user.create_user() {
+                Ok(result) => responseCreate.id_user = result as u64,
+                Err(_) => println!("No se pudo crear al usuario")
+            }
+        },
+        Err(_) => print!("No se logró crar persona")
+    };
+    
+    Ok(HttpResponse::Created().content_type(ContentType::json()).json(responseCreate))
 }
 
 pub async fn get_person(person: web::Path<u32>) -> Result<impl Responder> {

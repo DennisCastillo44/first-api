@@ -29,7 +29,8 @@ impl PersonModel {
                 last_name: row.get(2)?,
                 birthday: row.get(3)?,
                 active: true,
-                contact: None
+                contact: None,
+                user_data: None
             })
         }).unwrap();
 
@@ -49,7 +50,8 @@ impl PersonModel {
                 last_name: row.get(2)?,
                 birthday: row.get(3)?,
                 active: row.get(4)?,
-                contact: None
+                contact: None,
+                user_data: None
             })
         }).unwrap();
 
@@ -65,14 +67,14 @@ impl PersonModel {
                 let params_update = data.unwrap();
                 let active: u8 = if params_update.active {1} else {0};
                 match conn.execute("UPDATE person SET name = ?1, lastName = ?2, birthday = ?3, active = ?4 WHERE id = ?5", params![&params_update.first_name, &params_update.last_name, &params_update.birthday, &active, &person]) {
-                    Ok(updated) => Ok(true),
-                    Err(err) => Ok(false)
+                    Ok(_) => Ok(true),
+                    Err(_) => Ok(false)
                 }
             },
             "DELETE" => {
                 match conn.execute("UPDATE person SET active = false WHERE id = ?1", [&person]) {
-                    Ok(updated) => Ok(true),
-                    Err(err) => Ok(false)
+                    Ok(_) => Ok(true),
+                    Err(_) => Ok(false)
                 }
             },
             _ => Err(String::from("No es valido mi papu"))

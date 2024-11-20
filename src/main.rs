@@ -4,6 +4,8 @@ mod router;
 mod controllers;
 mod models;
 mod types;
+mod lib_;
+mod handlers;
 use database::database_mod::Database_;
 //use database::database_mod::Database_;
 pub use server_::Server_;
