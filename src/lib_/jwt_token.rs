@@ -8,8 +8,8 @@ use chrono::{Utc, Duration};
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct JWTSigning {
-    pub user_id: u32,
-    pub person_id: u32
+    pub user_id: u64,
+    pub person_id: u64
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -20,7 +20,7 @@ pub struct TokenResponse {
 
 impl JWTSigning {
 
-    pub fn new(person_id: u32, user_id: u32) -> JWTSigning {
+    pub fn new(person_id: u64, user_id: u64) -> JWTSigning {
         JWTSigning{person_id, user_id}
     }
 
@@ -39,7 +39,7 @@ impl JWTSigning {
         let mut claims = BTreeMap::new();
         claims.insert("person_id", self.person_id);
         claims.insert("user_id", self.user_id);
-        claims.insert("exp", expiration_datetime.timestamp() as u32);
+        claims.insert("exp", expiration_datetime.timestamp() as u64);
 
         let token = Token::new(header, claims).sign_with_key(&key).unwrap();
 

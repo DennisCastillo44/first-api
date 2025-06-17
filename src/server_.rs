@@ -1,6 +1,6 @@
 use crate::router::login;
 pub use crate::router::person;
-use actix_web::{web, App, HttpServer};
+use actix_web::{web, App, HttpResponse, HttpServer};
 pub struct Server_;
 
 impl Server_ {
@@ -13,6 +13,7 @@ impl Server_ {
                         web::scope("/api/v1")
                             .configure(person::person_router)
                             .configure(login::login_router)
+                            .route("/health-check", web::to(|| async { HttpResponse::Ok().body("all--ok") }))
                     )
                 }).bind(("127.0.0.1", 8080))?.run().await;
     }

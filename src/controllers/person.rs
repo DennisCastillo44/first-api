@@ -1,70 +1,81 @@
 use actix_web::{http::header::ContentType, web::{self}, HttpRequest, HttpResponse, Responder, Result};
 use serde::{Deserialize, Serialize};
-use crate::{lib_::hashing256::Hash, models::{person, user::{self}}};
-use crate::types::person::{Person, User as typeUser};
+use crate::{handlers::{person::Person, user::User}, models::person};
+use crate::handlers::person as person_;
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct UserRequest {
+    pub username: String,
+    pub password: String
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct PersonRequest {
+    pub first_name: String,
+    pub last_name: String,
+    pub birthday: String,
+    pub active: bool,
+    pub user_data: UserRequest
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+struct ResponseCreatePerson {
+    id_person: u64,
+    id_user: u64
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+struct DeleteResponse {
+    delete: bool
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+struct ResponseUpdate {
+    updated: bool
+}
 
 pub async fn persons() -> Result<impl Responder> {
 
-    let persons_ = person::PersonModel::get_persons().unwrap();
+    let persons_ = person_::Person::get_persons()?; //person::PersonModel::get_persons().unwrap();
     Ok(HttpResponse::Ok().content_type(ContentType::json()).json(persons_))
 }
 
-pub async fn register_person(data: web::Json<Person>) -> Result<impl Responder> {
-
-    #[derive(Serialize, Deserialize, Debug)]
-    struct ResponseCreatePerson {
-        id_person: u64,
-        id_user: u64
-    }
-
-    let mut responseCreate = ResponseCreatePerson {
-        id_person: 0,
-        id_user: 0
-    };
-
-    let user_data = match &data.user_data {
-        Some(t) => t,
-        None => &typeUser {
-            username: String::from(""),
-            password: String::from("")
-        }
-    };
+pub async fn register_person(data: web::Json<PersonRequest>) -> Result<impl Responder> {
     
-    match person::PersonModel::create_person(&data) {
-        Ok(person) => {
-            
-            responseCreate.id_person = person as u64;
-            let mut new_user = user::User::new(&user_data.username, &user_data.password, Some(person as u64));
-            match new_user.create_user() {
-                Ok(result) => responseCreate.id_user = result as u64,
-                Err(_) => println!("No se pudo crear al usuario")
-            }
-        },
-        Err(_) => print!("No se logró crar persona")
-    };
+    User::new(data.user_data.username.to_string(), data.user_data.password.to_string(), None).verify_user()?;
+    let person = person_::Person::new(data.first_name.to_string(), data.last_name.to_string(), data.birthday.to_string(), data.active);
+    let idperson = person.create()?;
+    let user = User::new(data.user_data.username.to_string(), data.user_data.password.to_string(), Some(idperson));
+    let userid = user.create()?;
     
-    Ok(HttpResponse::Created().content_type(ContentType::json()).json(responseCreate))
+    Ok(HttpResponse::Created().content_type(ContentType::json()).json(ResponseCreatePerson {
+        id_person: idperson,
+        id_user: userid
+    }))
 }
 
-pub async fn get_person(person: web::Path<u32>) -> Result<impl Responder> {
+pub async fn get_person(person: web::Path<u64>) -> Result<impl Responder> {
 
     let person_id = person.into_inner();
-    let person_data = person::PersonModel::get_person(&person_id).unwrap();
+    let person_data = person_::Person::get_person(person_id)?; //person::PersonModel::get_person(&person_id).unwrap();
     Ok(HttpResponse::Ok().content_type(ContentType::json()).json(person_data))
 }
 
-pub async fn update_person(req:HttpRequest, person: web::Path<u32>, data: Option<web::Json<Person>>) -> Result<impl Responder> {
+pub async fn update_person(personid: web::Path<u64>, data: web::Json<Person>) -> Result<impl Responder> {
+    
+    let person_id = personid.into_inner();
+    person_::Person::verify_person(person_id)?;
+    let person = person_::Person::new(data.first_name.to_string(), data.last_name.to_string(), data.birthday.to_string(), data.active);
+    let update = person.update_person(&person_id)?;
+    Ok(HttpResponse::Ok().content_type(ContentType::json()).json(ResponseUpdate {updated: update}))
+}
 
-    #[derive(Debug, Serialize, Deserialize)]
-    struct ResponseUpdate {
-        updated: bool
-    }
+pub async fn delete_person(person: web::Path<u64>) -> Result<impl Responder>  {
 
     let person_id = person.into_inner();
-    let data_ = match data {
-        Some(d) => person::PersonModel::update_person(&req.method().to_string(), &person_id, Some(&d)).unwrap(),
-        None => person::PersonModel::update_person(&req.method().to_string(), &person_id, None).unwrap()
-    };
- 
-    Ok(HttpResponse::Ok().content_type(ContentType::json()).json(ResponseUpdate {updated: data_}))
+    person_::Person::verify_person(person_id)?;
+    let delete = person_::Person::delete_person(person_id)?;
+    Ok(HttpResponse::Ok().insert_header(ContentType::json()).json(DeleteResponse {
+        delete: delete
+    }))
 }
